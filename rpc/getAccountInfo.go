@@ -105,6 +105,21 @@ func (cl *Client) GetAccountInfoWithOpts(
 	return out, nil
 }
 
+// GetAccountDataInto decodes the binary data and populates
+// the provided `inVar` parameter with all data associated with the account of provided publicKey.
+func (cl *Client) GetAccountDataIntoWithOpts(
+	ctx context.Context,
+	account solana.PublicKey,
+	inVar interface{},
+	opts *GetAccountInfoOpts,
+) (err error) {
+	resp, err := cl.GetAccountInfoWithOpts(ctx, account, opts)
+	if err != nil {
+		return err
+	}
+	return bin.NewBinDecoder(resp.Value.Data.GetBinary()).Decode(inVar)
+}
+
 func (cl *Client) getAccountInfoWithOpts(
 	ctx context.Context,
 	account solana.PublicKey,
