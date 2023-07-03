@@ -129,6 +129,22 @@ func (cl *Client) GetBlockWithOpts(
 		// Block is not confirmed.
 		return nil, ErrNotConfirmed
 	}
+	for i, val := range out.Transactions {
+		if val.Meta.Err == nil {
+			continue
+		}
+		// TODO: Handle other encoding types.
+		tx, err := decodeTransaction(string(val.Transaction.GetBinary()))
+		if err != nil {
+			return nil, err
+		}
+		txErr, ok := solana.ParseTransactionError(tx, val.Meta.Err)
+		if !ok {
+			continue
+		}
+		val.Meta.Err = txErr
+		out.Transactions[i] = val
+	}
 	return
 }
 

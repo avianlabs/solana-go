@@ -76,6 +76,19 @@ func (cl *Client) GetTransaction(
 	if out == nil {
 		return nil, ErrNotFound
 	}
+
+	if out.Meta.Err == nil {
+		return
+	}
+	tx, err := out.Transaction.GetTransaction()
+	if err != nil {
+		return
+	}
+	txErr, ok := solana.ParseTransactionError(tx, out.Meta.Err)
+	if !ok {
+		return
+	}
+	out.Meta.Err = txErr
 	return
 }
 
