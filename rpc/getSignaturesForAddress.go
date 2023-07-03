@@ -91,6 +91,19 @@ func (cl *Client) GetSignaturesForAddressWithOpts(
 		}
 	}
 
-	err = cl.rpcClient.CallForInto(ctx, &out, "getSignaturesForAddress", params)
+	if err = cl.rpcClient.CallForInto(ctx, &out, "getSignaturesForAddress", params); err != nil {
+		return
+	}
+	for i, sig := range out {
+		if sig.Err == nil {
+			continue
+		}
+		txErr, ok := solana.ParseTransactionError(nil, sig.Err)
+		if !ok {
+			continue
+		}
+		out[i].Err = txErr
+	}
+
 	return
 }

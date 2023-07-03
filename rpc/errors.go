@@ -14,6 +14,15 @@
 
 package rpc
 
+import (
+	"encoding/base64"
+
+	bin "github.com/gagliardetto/binary"
+	"github.com/gagliardetto/solana-go"
+	"github.com/gagliardetto/solana-go/rpc/jsonrpc"
+	"github.com/pkg/errors"
+)
+
 // rpc error:
 // - https://github.com/solana-labs/solana/blob/d5961e9d9f005966f409fbddd40c3651591b27fb/client/src/rpc_custom_error.rs
 
@@ -23,3 +32,33 @@ package rpc
 
 // instruction error
 // - https://github.com/solana-labs/solana/blob/f6371cce176d481b4132e5061262ca015db0f8b1/sdk/program/src/instruction.rs
+
+func decodeTransaction(b64 string) (*solana.Transaction, error) {
+	txData, err := base64.StdEncoding.DecodeString(b64)
+	if err != nil {
+		return nil, errors.Wrap(err, "")
+	}
+	var tx solana.Transaction
+	if err := bin.NewCompactU16Decoder([]byte(txData)).Decode(&tx); err != nil {
+		return nil, errors.Wrap(err, "")
+	}
+	return &tx, nil
+}
+
+func decodeTxError(tx *solana.Transaction, err error) error {
+	var e *jsonrpc.RPCError
+	if !errors.As(err, &e) {
+		return err
+	}
+	data, ok := e.Data.(map[string]interface{})
+	if !ok {
+		return err
+	}
+	txErr, ok := solana.ParseTransactionError(tx, data["err"])
+	if !ok {
+		return err
+	}
+	data["err"] = txErr
+	e.Data = data
+	return e
+}
