@@ -7,7 +7,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,9 +19,11 @@ package rpc
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 
 	"github.com/gagliardetto/solana-go"
+	"github.com/gagliardetto/solana-go/rpc/jsonrpc"
 )
 
 // SendTransaction submits a signed transaction to the cluster for processing.
@@ -57,11 +59,11 @@ func (cl *Client) SendTransaction(
 //
 // Before submitting, the following preflight checks are performed:
 //
-// 	- The transaction signatures are verified
-//  - The transaction is simulated against the bank slot specified by the preflight
-//    commitment. On failure an error will be returned. Preflight checks may be
-//    disabled if desired. It is recommended to specify the same commitment and
-//    preflight commitment to avoid confusing behavior.
+//   - The transaction signatures are verified
+//   - The transaction is simulated against the bank slot specified by the preflight
+//     commitment. On failure an error will be returned. Preflight checks may be
+//     disabled if desired. It is recommended to specify the same commitment and
+//     preflight commitment to avoid confusing behavior.
 //
 // The returned signature is the first signature in the transaction, which is
 // used to identify the transaction (transaction id). This identifier can be
@@ -76,9 +78,30 @@ func (cl *Client) SendTransactionWithOpts(
 		return solana.Signature{}, fmt.Errorf("send transaction: encode transaction: %w", err)
 	}
 
-	return cl.SendEncodedTransactionWithOpts(
+	signature, err = cl.SendEncodedTransactionWithOpts(
 		ctx,
 		base64.StdEncoding.EncodeToString(txData),
 		opts,
 	)
+	if !cl.parseTransactionErrors {
+		return
+	}
+	if err != nil {
+		var e *jsonrpc.RPCError
+		if !errors.As(err, &e) {
+			return
+		}
+		data, ok := e.Data.(map[string]interface{})
+		if !ok {
+			return
+		}
+		txErr, ok := solana.ParseTransactionError(transaction, data["err"])
+		if !ok {
+			return
+		}
+		data["err"] = txErr
+		e.Data = data
+		return
+	}
+	return
 }

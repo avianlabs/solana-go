@@ -129,6 +129,24 @@ func (cl *Client) GetBlockWithOpts(
 		// Block is not confirmed.
 		return nil, ErrNotConfirmed
 	}
+	if !cl.parseTransactionErrors {
+		return
+	}
+	for i, val := range out.Transactions {
+		if val.Meta.Err == nil {
+			continue
+		}
+		tx, err := val.GetTransaction()
+		if err != nil {
+			return nil, err
+		}
+		txErr, ok := solana.ParseTransactionError(tx, val.Meta.Err)
+		if !ok {
+			continue
+		}
+		val.Meta.Err = txErr
+		out.Transactions[i] = val
+	}
 	return
 }
 

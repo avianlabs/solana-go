@@ -21,6 +21,7 @@ import (
 	"encoding/base64"
 	"fmt"
 
+	bin "github.com/gagliardetto/binary"
 	"github.com/gagliardetto/solana-go"
 )
 
@@ -133,5 +134,23 @@ func (cl *Client) SimulateRawTransactionWithOpts(
 	}
 
 	err = cl.rpcClient.CallForInto(ctx, &out, "simulateTransaction", params)
+	if err != nil {
+		return
+	}
+	if out.Value.Err == nil {
+		return
+	}
+	if !cl.parseTransactionErrors {
+		return
+	}
+	var tx solana.Transaction
+	if err := bin.NewCompactU16Decoder([]byte(txData)).Decode(&tx); err != nil {
+		return nil, err
+	}
+	err, ok := solana.ParseTransactionError(&tx, out.Value.Err)
+	if !ok {
+		return
+	}
+	out.Value.Err = err
 	return
 }

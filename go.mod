@@ -6,6 +6,7 @@ require (
 	github.com/gagliardetto/binary v0.7.7
 	github.com/gagliardetto/gofuzz v1.2.2
 	github.com/gagliardetto/treeout v0.1.4
+	github.com/test-go/testify v1.1.4
 )
 
 require (

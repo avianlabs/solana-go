@@ -47,6 +47,22 @@ func (cl *Client) GetSignatureStatuses(
 		// Unknown transaction
 		return nil, ErrNotFound
 	}
+	if !cl.parseTransactionErrors {
+		return
+	}
+	for i, sigStatus := range out.Value {
+		if sigStatus == nil {
+			continue
+		}
+		if sigStatus.Err == nil {
+			continue
+		}
+		txErr, ok := solana.ParseTransactionError(nil, sigStatus.Err)
+		if !ok {
+			continue
+		}
+		out.Value[i].Err = txErr
+	}
 
 	return
 }

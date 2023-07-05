@@ -43,6 +43,7 @@ const ProgramName = "Token"
 func init() {
 	if !ProgramID.IsZero() {
 		ag_solanago.RegisterInstructionDecoder(ProgramID, registryDecodeInstruction)
+		ag_solanago.RegisterCustomInstructionErrorResolver(ProgramID, CustomErrorResolver)
 	}
 }
 
