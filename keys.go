@@ -641,6 +641,15 @@ func FindProgramAddress(seed [][]byte, programID PublicKey) (PublicKey, uint8, e
 	return PublicKey{}, bumpSeed, errors.New("unable to find a valid program address")
 }
 
+// MustFindassociatedTokenAddress panicing if resolving fails.
+func MustFindassociatedTokenAddress(wallet, mint PublicKey) (PublicKey, uint8) {
+	token, seed, err := FindAssociatedTokenAddress(wallet, mint)
+	if err != nil {
+		panic(err)
+	}
+	return token, seed
+}
+
 func FindAssociatedTokenAddress(
 	wallet PublicKey,
 	mint PublicKey,
