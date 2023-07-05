@@ -33,8 +33,9 @@ var ErrNotFound = errors.New("not found")
 var ErrNotConfirmed = errors.New("not confirmed")
 
 type Client struct {
-	rpcURL    string
-	rpcClient JSONRPCClient
+	rpcURL                 string
+	rpcClient              JSONRPCClient
+	parseTransactionErrors bool
 }
 
 type JSONRPCClient interface {
@@ -45,7 +46,7 @@ type JSONRPCClient interface {
 
 // New creates a new Solana JSON RPC client.
 // Client is safe for concurrent use by multiple goroutines.
-func New(rpcEndpoint string) *Client {
+func New(rpcEndpoint string, options ...func(*Client)) *Client {
 	opts := &jsonrpc.RPCClientOpts{
 		HTTPClient: newHTTP(),
 	}
@@ -56,13 +57,20 @@ func New(rpcEndpoint string) *Client {
 
 // New creates a new Solana JSON RPC client with the provided custom headers.
 // The provided headers will be added to each RPC request sent via this RPC client.
-func NewWithHeaders(rpcEndpoint string, headers map[string]string) *Client {
+func NewWithHeaders(rpcEndpoint string, headers map[string]string, options ...func(*Client)) *Client {
 	opts := &jsonrpc.RPCClientOpts{
 		HTTPClient:    newHTTP(),
 		CustomHeaders: headers,
 	}
 	rpcClient := jsonrpc.NewClientWithOpts(rpcEndpoint, opts)
 	return NewWithCustomRPCClient(rpcClient)
+}
+
+// WithTransactionErrorParsing configures the client to parse transaction
+// errors into a 'solana.TransactionError' type, rather than leaving them as
+// the raw data returned from the wire.
+func WithTransactionErrorParsing(cl *Client) {
+	cl.parseTransactionErrors = true
 }
 
 // Close closes the client.

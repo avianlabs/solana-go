@@ -33,11 +33,16 @@ func parseTransactionErrorObject(tx *Transaction, err map[string]interface{}) (T
 	if !ok {
 		return nil, false
 	}
-	resolve := func(int) (error, bool) { return nil, false }
+	var progID *PublicKey
 	if tx != nil {
-		resolve = CustomInstructionErrorResolver(tx, uint16(index))
+		in := tx.Message.Instructions[int(index)]
+		prog, rErr := tx.ResolveProgramIDIndex(in.ProgramIDIndex)
+		if rErr != nil {
+			return nil, false //nolint: nilerr
+		}
+		progID = &prog
 	}
-	cause, ok := ParseInstructionError(fields[1], resolve)
+	cause, ok := ParseInstructionError(fields[1], progID)
 	if !ok {
 		return nil, false
 	}

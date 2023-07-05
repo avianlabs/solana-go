@@ -7,6 +7,7 @@ require (
 	github.com/gagliardetto/gofuzz v1.2.2
 	github.com/gagliardetto/treeout v0.1.4
 	github.com/google/uuid v1.6.0
+	github.com/test-go/testify v1.1.4
 )
 
 require (

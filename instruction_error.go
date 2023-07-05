@@ -31,34 +31,26 @@ type InstructionError interface {
 	xx_isInstructionError()
 }
 
-func CustomInstructionErrorResolver(tx *Transaction, index uint16) func(code int) (error, bool) {
-	return func(code int) (error, bool) {
-		in := tx.Message.Instructions[index]
-		prog, err := tx.ResolveProgramIDIndex(in.ProgramIDIndex)
-		if err != nil {
-			return nil, false //nolint: nilerr
-		}
-		return ResolveCustomInstructionError(prog, code)
-	}
-}
-
-func ParseInstructionError(err interface{}, resolve func(int) (error, bool)) (InstructionError, bool) {
+func ParseInstructionError(err interface{}, progID *PublicKey) (InstructionError, bool) {
 	switch t := err.(type) {
 	case string:
 		return parseInstructionErrorString(t)
 	case map[string]interface{}:
-		return parseInstructionErrorObject(t, resolve)
+		return parseInstructionErrorObject(t, progID)
 	default:
 		return nil, false
 	}
 }
 
-func parseInstructionErrorObject(err map[string]interface{}, resolve func(code int) (error, bool)) (InstructionError, bool) {
+func parseInstructionErrorObject(err map[string]interface{}, progID *PublicKey) (InstructionError, bool) {
 	code, ok := asFloat64(err["Custom"])
 	if !ok {
 		return nil, false
 	}
-	cause, _ := resolve(int(code))
+	var cause error
+	if progID != nil {
+		cause, _ = ResolveCustomInstructionError(*progID, int(code))
+	}
 	return &InstructionError_Custom{
 		Code:  uint32(code),
 		Cause: cause,

@@ -94,6 +94,9 @@ func (cl *Client) GetSignaturesForAddressWithOpts(
 	if err = cl.rpcClient.CallForInto(ctx, &out, "getSignaturesForAddress", params); err != nil {
 		return
 	}
+	if !cl.parseTransactionErrors {
+		return
+	}
 	for i, sig := range out {
 		if sig.Err == nil {
 			continue

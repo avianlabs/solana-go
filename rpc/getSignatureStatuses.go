@@ -47,6 +47,9 @@ func (cl *Client) GetSignatureStatuses(
 		// Unknown transaction
 		return nil, ErrNotFound
 	}
+	if !cl.parseTransactionErrors {
+		return
+	}
 	for i, sigStatus := range out.Value {
 		if sigStatus == nil {
 			continue

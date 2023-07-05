@@ -19,9 +19,11 @@ package rpc
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 
 	"github.com/gagliardetto/solana-go"
+	"github.com/gagliardetto/solana-go/rpc/jsonrpc"
 )
 
 // SendTransaction submits a signed transaction to the cluster for processing.
@@ -81,8 +83,24 @@ func (cl *Client) SendTransactionWithOpts(
 		base64.StdEncoding.EncodeToString(txData),
 		opts,
 	)
+	if !cl.parseTransactionErrors {
+		return
+	}
 	if err != nil {
-		err = decodeTxError(transaction, err)
+		var e *jsonrpc.RPCError
+		if !errors.As(err, &e) {
+			return
+		}
+		data, ok := e.Data.(map[string]interface{})
+		if !ok {
+			return
+		}
+		txErr, ok := solana.ParseTransactionError(transaction, data["err"])
+		if !ok {
+			return
+		}
+		data["err"] = txErr
+		e.Data = data
 		return
 	}
 	return
