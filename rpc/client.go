@@ -52,7 +52,7 @@ func New(rpcEndpoint string, options ...func(*Client)) *Client {
 	}
 
 	rpcClient := jsonrpc.NewClientWithOpts(rpcEndpoint, opts)
-	return NewWithCustomRPCClient(rpcClient)
+	return NewWithCustomRPCClient(rpcClient, options...)
 }
 
 // New creates a new Solana JSON RPC client with the provided custom headers.
@@ -63,7 +63,7 @@ func NewWithHeaders(rpcEndpoint string, headers map[string]string, options ...fu
 		CustomHeaders: headers,
 	}
 	rpcClient := jsonrpc.NewClientWithOpts(rpcEndpoint, opts)
-	return NewWithCustomRPCClient(rpcClient)
+	return NewWithCustomRPCClient(rpcClient, options...)
 }
 
 // WithTransactionErrorParsing configures the client to parse transaction
@@ -86,10 +86,14 @@ func (cl *Client) Close() error {
 
 // NewWithCustomRPCClient creates a new Solana RPC client
 // with the provided RPC client.
-func NewWithCustomRPCClient(rpcClient JSONRPCClient) *Client {
-	return &Client{
+func NewWithCustomRPCClient(rpcClient JSONRPCClient, options ...func(*Client)) *Client {
+	cl := &Client{
 		rpcClient: rpcClient,
 	}
+	for _, option := range options {
+		option(cl)
+	}
+	return cl
 }
 
 var (
