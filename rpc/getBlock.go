@@ -129,12 +129,14 @@ func (cl *Client) GetBlockWithOpts(
 		// Block is not confirmed.
 		return nil, ErrNotConfirmed
 	}
+	if !cl.parseTransactionErrors {
+		return
+	}
 	for i, val := range out.Transactions {
 		if val.Meta.Err == nil {
 			continue
 		}
-		// TODO: Handle other encoding types.
-		tx, err := decodeTransaction(string(val.Transaction.GetBinary()))
+		tx, err := val.GetTransaction()
 		if err != nil {
 			return nil, err
 		}
