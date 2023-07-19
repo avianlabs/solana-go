@@ -5,12 +5,12 @@ import (
 )
 
 var (
-	DecodeAuthorize         solana.TypedInstructionDecoder[*Authorize]         = decode[*Authorize]()
-	DecodeInitializeAccount solana.TypedInstructionDecoder[*InitializeAccount] = decode[*InitializeAccount]()
-	DecodeWithdraw          solana.TypedInstructionDecoder[*Withdraw]          = decode[*Withdraw]()
+	DecodeAuthorize         = decode[*Authorize]()
+	DecodeInitializeAccount = decode[*InitializeAccount]()
+	DecodeWithdraw          = decode[*Withdraw]()
 )
 
-func decode[T any]() solana.TypedInstructionDecoder[T] {
+func decode[T any]() func(*solana.Message, int) (T, error) {
 	return solana.DecodeInstructionType[*Instruction, T](
 		ProgramID,
 		InstructionImplDef,

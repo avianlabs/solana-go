@@ -5,21 +5,21 @@ import (
 )
 
 var (
-	DecodeAdvanceNonceAccount    solana.TypedInstructionDecoder[*AdvanceNonceAccount]    = decode[*AdvanceNonceAccount]()
-	DecodeAllocate               solana.TypedInstructionDecoder[*Allocate]               = decode[*Allocate]()
-	DecodeAllocateWithSeed       solana.TypedInstructionDecoder[*AllocateWithSeed]       = decode[*AllocateWithSeed]()
-	DecodeAssign                 solana.TypedInstructionDecoder[*Assign]                 = decode[*Assign]()
-	DecodeAssignWithSeed         solana.TypedInstructionDecoder[*AssignWithSeed]         = decode[*AssignWithSeed]()
-	DecodeAuthorizeNonceAccount  solana.TypedInstructionDecoder[*AuthorizeNonceAccount]  = decode[*AuthorizeNonceAccount]()
-	DecodeCreateAccount          solana.TypedInstructionDecoder[*CreateAccount]          = decode[*CreateAccount]()
-	DecodeCreateAccountWithSeed  solana.TypedInstructionDecoder[*CreateAccountWithSeed]  = decode[*CreateAccountWithSeed]()
-	DecodeInitializeNonceAccount solana.TypedInstructionDecoder[*InitializeNonceAccount] = decode[*InitializeNonceAccount]()
-	DecodeTransfer               solana.TypedInstructionDecoder[*Transfer]               = decode[*Transfer]()
-	DecodeTransferWithSeed       solana.TypedInstructionDecoder[*TransferWithSeed]       = decode[*TransferWithSeed]()
-	DecodeWithdrawNonceAccount   solana.TypedInstructionDecoder[*WithdrawNonceAccount]   = decode[*WithdrawNonceAccount]()
+	DecodeAdvanceNonceAccount    = decode[*AdvanceNonceAccount]()
+	DecodeAllocate               = decode[*Allocate]()
+	DecodeAllocateWithSeed       = decode[*AllocateWithSeed]()
+	DecodeAssign                 = decode[*Assign]()
+	DecodeAssignWithSeed         = decode[*AssignWithSeed]()
+	DecodeAuthorizeNonceAccount  = decode[*AuthorizeNonceAccount]()
+	DecodeCreateAccount          = decode[*CreateAccount]()
+	DecodeCreateAccountWithSeed  = decode[*CreateAccountWithSeed]()
+	DecodeInitializeNonceAccount = decode[*InitializeNonceAccount]()
+	DecodeTransfer               = decode[*Transfer]()
+	DecodeTransferWithSeed       = decode[*TransferWithSeed]()
+	DecodeWithdrawNonceAccount   = decode[*WithdrawNonceAccount]()
 )
 
-func decode[T any]() solana.TypedInstructionDecoder[T] {
+func decode[T any]() func(*solana.Message, int) (T, error) {
 	return solana.DecodeInstructionType[*Instruction, T](
 		ProgramID,
 		InstructionImplDef,

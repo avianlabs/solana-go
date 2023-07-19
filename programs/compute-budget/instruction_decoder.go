@@ -5,13 +5,13 @@ import (
 )
 
 var (
-	DecodeRequestHeapFrame       solana.TypedInstructionDecoder[*RequestHeapFrame]       = decode[*RequestHeapFrame]()
-	DecodeRequestUnitsDeprecated solana.TypedInstructionDecoder[*RequestUnitsDeprecated] = decode[*RequestUnitsDeprecated]()
-	DecodeSetComputeUnitLimit    solana.TypedInstructionDecoder[*SetComputeUnitLimit]    = decode[*SetComputeUnitLimit]()
-	DecodeSetComputeUnitPrice    solana.TypedInstructionDecoder[*SetComputeUnitPrice]    = decode[*SetComputeUnitPrice]()
+	DecodeRequestHeapFrame       = decode[*RequestHeapFrame]()
+	DecodeRequestUnitsDeprecated = decode[*RequestUnitsDeprecated]()
+	DecodeSetComputeUnitLimit    = decode[*SetComputeUnitLimit]()
+	DecodeSetComputeUnitPrice    = decode[*SetComputeUnitPrice]()
 )
 
-func decode[T any]() solana.TypedInstructionDecoder[T] {
+func decode[T any]() func(*solana.Message, int) (T, error) {
 	return solana.DecodeInstructionType[*Instruction, T](
 		ProgramID,
 		InstructionImplDef,
