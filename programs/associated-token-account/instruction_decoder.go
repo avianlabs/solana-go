@@ -5,10 +5,10 @@ import (
 )
 
 var (
-	DecodeCreate solana.TypedInstructionDecoder[*Create] = decode[*Create]()
+	DecodeCreate = decode[*Create]()
 )
 
-func decode[T any]() solana.TypedInstructionDecoder[T] {
+func decode[T any]() func(*solana.Message, int) (T, error) {
 	return solana.DecodeInstructionType[*Instruction, T](
 		ProgramID,
 		InstructionImplDef,

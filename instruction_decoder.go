@@ -6,10 +6,6 @@ import (
 	bin "github.com/gagliardetto/binary"
 )
 
-// TypedInstructionDecoder implementations decode the instruction at the
-// provided index in the message to the provided type.
-type TypedInstructionDecoder[A any] func(*Message, int) (A, error)
-
 // DecodeInstructionType decodes instruction at index in the message using the
 // provided decoders. Returning the requested type. It's expected that this is
 // used in conjunction with typed instructions in the program packages.
@@ -20,7 +16,7 @@ func DecodeInstructionType[A interface {
 	expectedProgramID PublicKey,
 	def *bin.VariantDefinition,
 	decodeFn func([]*AccountMeta, []byte) (A, error),
-) TypedInstructionDecoder[B] {
+) func(*Message, int) (B, error) {
 	var (
 		a A
 		b B
