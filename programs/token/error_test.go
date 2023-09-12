@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/gagliardetto/solana-go"
-	"github.com/stretchr/testify/assert"
+	"github.com/test-go/testify/assert"
 	"github.com/test-go/testify/require"
 )
 
@@ -40,5 +40,5 @@ func TestParseError(t *testing.T) {
 			Code:  1,
 			Cause: Error_InsufficientFunds{},
 		},
-	}, err)
+	}, err.(interface{ Unwrap() error }).Unwrap())
 }

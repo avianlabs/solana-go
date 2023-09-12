@@ -7,21 +7,61 @@ import (
 
 type TransactionError interface {
 	error
+	RawError() interface{}
 	xx_isTransactionError()
 }
 
-func ParseTransactionError(tx *Transaction, err interface{}) (TransactionError, bool) {
-	switch t := err.(type) {
+type transactionError struct {
+	cause error
+	raw   interface{}
+}
+
+var _ TransactionError = &transactionError{}
+
+func (v *transactionError) Error() string {
+	return v.cause.Error()
+}
+
+func (v *transactionError) Unwrap() error {
+	return v.cause
+}
+
+func (v *transactionError) Cause() error {
+	return v.cause
+}
+
+func (v *transactionError) RawError() interface{} {
+	return v.raw
+}
+
+func (transactionError) xx_isTransactionError() {}
+
+func ParseTransactionError(tx *Transaction, raw interface{}) (TransactionError, bool) {
+	switch t := raw.(type) {
 	case string:
-		return parseTransactionErrorString(t)
+		err, ok := parseTransactionErrorString(t)
+		if !ok {
+			return nil, false
+		}
+		return &transactionError{
+			cause: err,
+			raw:   raw,
+		}, true
 	case map[string]interface{}:
-		return parseTransactionErrorObject(tx, t)
+		err, ok := parseTransactionErrorObject(tx, t)
+		if !ok {
+			return nil, false
+		}
+		return &transactionError{
+			cause: err,
+			raw:   raw,
+		}, true
 	default:
 		return nil, false
 	}
 }
 
-func parseTransactionErrorObject(tx *Transaction, err map[string]interface{}) (TransactionError, bool) {
+func parseTransactionErrorObject(tx *Transaction, err map[string]interface{}) (error, bool) {
 	fields, ok := err["InstructionError"].([]interface{})
 	if !ok {
 		return nil, false
@@ -68,7 +108,7 @@ func asFloat64(v interface{}) (float64, bool) {
 	return index, true
 }
 
-func parseTransactionErrorString(err string) (TransactionError, bool) {
+func parseTransactionErrorString(err string) (error, bool) {
 	switch err {
 	case "AccountInUse":
 		return TransactionError_AccountInUse{}, true
