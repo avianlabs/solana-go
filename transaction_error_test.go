@@ -16,7 +16,7 @@ func TestParseTransactionError(t *testing.T) {
 
 	err, ok = ParseTransactionError(nil, "AccountInUse")
 	require.True(t, ok)
-	assert.ErrorIs(t, err, TransactionError_AccountInUse{})
+	require.ErrorIs(t, err, TransactionError_AccountInUse{})
 
 	err, ok = ParseTransactionError(nil, map[string]interface{}{
 		"InstructionError": []interface{}{
@@ -25,10 +25,12 @@ func TestParseTransactionError(t *testing.T) {
 		},
 	})
 	require.True(t, ok)
+	var e *transactionError
+	require.ErrorAs(t, err, &e)
 	assert.Equal(t, &TransactionError_InstructionError{
 		Index: 1,
 		Cause: InstructionError_InvalidArgument{},
-	}, err)
+	}, err.(interface{ Unwrap() error }).Unwrap())
 
 	err, ok = ParseTransactionError(nil, map[string]interface{}{
 		"InstructionError": []interface{}{
@@ -44,5 +46,5 @@ func TestParseTransactionError(t *testing.T) {
 			Code:  16,
 			Cause: nil,
 		},
-	}, err)
+	}, err.(interface{ Unwrap() error }).Unwrap())
 }
