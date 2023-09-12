@@ -25,7 +25,7 @@ func TestParseTransactionError(t *testing.T) {
 		},
 	})
 	require.True(t, ok)
-	var e *transactionError
+	var e *TransactionError
 	require.ErrorAs(t, err, &e)
 	assert.Equal(t, &TransactionError_InstructionError{
 		Index: 1,
