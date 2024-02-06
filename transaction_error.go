@@ -51,53 +51,6 @@ func ParseTransactionError(tx *Transaction, raw interface{}) (*TransactionError,
 	}
 }
 
-func parseTransactionErrorObject(tx *Transaction, err map[string]interface{}) (error, bool) {
-	fields, ok := err["InstructionError"].([]interface{})
-	if !ok {
-		return nil, false
-	}
-	if len(fields) != 2 {
-		return nil, false
-	}
-	index, ok := asFloat64(fields[0])
-	if !ok {
-		return nil, false
-	}
-	var progID *PublicKey
-	if tx != nil {
-		in := tx.Message.Instructions[int(index)]
-		prog, rErr := tx.ResolveProgramIDIndex(in.ProgramIDIndex)
-		if rErr != nil {
-			return nil, false //nolint: nilerr
-		}
-		progID = &prog
-	}
-	cause, ok := ParseInstructionError(fields[1], progID)
-	if !ok {
-		return nil, false
-	}
-	return &TransactionError_InstructionError{
-		Index: int32(index),
-		Cause: cause,
-	}, true
-}
-
-func asFloat64(v interface{}) (float64, bool) {
-	index, ok := v.(float64)
-	if ok {
-		return index, true
-	}
-	s, ok := v.(jsn.Number)
-	if !ok {
-		return 0, false
-	}
-	index, err := s.Float64()
-	if err != nil {
-		return 0, false
-	}
-	return index, true
-}
-
 func parseTransactionErrorString(err string) (error, bool) {
 	switch err {
 	case "AccountInUse":
@@ -135,6 +88,96 @@ func parseTransactionErrorString(err string) (error, bool) {
 	default:
 		return TransactionError_Undefined(err), true
 	}
+}
+
+func parseTransactionErrorObject(tx *Transaction, err map[string]interface{}) (error, bool) {
+	switch {
+	case hasKey(err, "InstructionError"):
+		fields, ok := err["InstructionError"].([]interface{})
+		if !ok {
+			return nil, false
+		}
+		return parseInstructionError(tx, fields)
+	case hasKey(err, "InsufficientFundsForRent"):
+		obj, ok := err["InsufficientFundsForRent"].(map[string]interface{})
+		if !ok {
+			return nil, false
+		}
+		return parseInsufficientFundsForRent(tx, obj)
+	default:
+		return nil, false
+	}
+}
+
+func parseInstructionError(
+	tx *Transaction, fields []interface{},
+) (*TransactionError_InstructionError, bool) {
+	if len(fields) != 2 {
+		return nil, false
+	}
+	index, ok := asFloat64(fields[0])
+	if !ok {
+		return nil, false
+	}
+	var progID *PublicKey
+	if tx != nil {
+		in := tx.Message.Instructions[int(index)]
+		prog, rErr := tx.ResolveProgramIDIndex(in.ProgramIDIndex)
+		if rErr != nil {
+			return nil, false //nolint: nilerr
+		}
+		progID = &prog
+	}
+	cause, ok := ParseInstructionError(fields[1], progID)
+	if !ok {
+		return nil, false
+	}
+	return &TransactionError_InstructionError{
+		Index: int32(index),
+		Cause: cause,
+	}, true
+}
+
+func parseInsufficientFundsForRent(
+	tx *Transaction, obj map[string]interface{},
+) (*TransactionError_InsufficientFundsForRent, bool) {
+	i, ok := obj["account_index"].(float64)
+	if !ok {
+		return nil, false
+	}
+	var acc *PublicKey
+	if tx != nil {
+		accs, err := tx.AccountMetaList()
+		if err != nil {
+			return nil, false
+		}
+		acc = accs[int(i)].PublicKey.ToPointer()
+	}
+	return &TransactionError_InsufficientFundsForRent{
+		AccountIndex: int(i),
+		Account:      acc,
+	}, true
+}
+
+func hasKey(m map[string]interface{}, k string) bool {
+	_, ok := m[k]
+	return ok
+}
+
+func asFloat64(v interface{}) (float64, bool) {
+	index, ok := v.(float64)
+	if ok {
+		return index, true
+	}
+	s, ok := v.(jsn.Number)
+	if !ok {
+		return 0, false
+	}
+	index, err := s.Float64()
+	if err != nil {
+		return 0, false
+	}
+	return index, true
 }
 
 type TransactionError_Undefined string
@@ -177,6 +220,19 @@ func (TransactionError_ProgramAccountNotFound) Error() string {
 type TransactionError_InsufficientFundsForFee struct{}
 
 func (TransactionError_InsufficientFundsForFee) Error() string { return "Insufficient funds for fee" }
+
+type TransactionError_InsufficientFundsForRent struct {
+	AccountIndex int
+	Account      *PublicKey
+}
+
+func (v TransactionError_InsufficientFundsForRent) Error() string {
+	acc := fmt.Sprintf("account at index '%d'", v.AccountIndex)
+	if v.Account != nil {
+		acc = fmt.Sprintf("%q", v.Account)
+	}
+	return fmt.Sprintf("Insufficient funds for rent in %s", acc)
+}
 
 // This account may not be used to pay transaction fees
 type TransactionError_InvalidAccountForFee struct{}
