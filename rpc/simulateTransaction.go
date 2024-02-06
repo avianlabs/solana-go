@@ -147,10 +147,10 @@ func (cl *Client) SimulateRawTransactionWithOpts(
 	if err := bin.NewCompactU16Decoder([]byte(txData)).Decode(&tx); err != nil {
 		return nil, err
 	}
-	err, ok := solana.ParseTransactionError(&tx, out.Value.Err)
+	txError, ok := solana.ParseTransactionError(&tx, out.Value.Err)
 	if !ok {
 		return
 	}
-	out.Value.Err = err
+	out.Value.Err = txError
 	return
 }

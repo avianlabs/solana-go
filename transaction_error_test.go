@@ -47,4 +47,14 @@ func TestParseTransactionError(t *testing.T) {
 			Cause: nil,
 		},
 	}, err.(interface{ Unwrap() error }).Unwrap())
+
+	err, ok = ParseTransactionError(nil, map[string]interface{}{
+		"InsufficientFundsForRent": map[string]interface{}{
+			"account_index": float64(1),
+		},
+	})
+	assert.Equal(t, &TransactionError_InsufficientFundsForRent{
+		AccountIndex: 1,
+		Account:      nil,
+	}, err.(interface{ Unwrap() error }).Unwrap())
 }
