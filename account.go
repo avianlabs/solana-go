@@ -18,6 +18,7 @@
 package solana
 
 import (
+	"errors"
 	"fmt"
 )
 
@@ -189,15 +190,18 @@ func (slice AccountMetaSlice) SplitFrom(index int) (AccountMetaSlice, AccountMet
 }
 
 func (a AccountMetaSlice) AssertEquivalent(b AccountMetaSlice) error {
+	var errs []error
 	for i, acc := range a {
 		if b.Len() < i+1 {
-			return fmt.Errorf("expected account meta at index %d, but got nothing", i)
+			errs = append(errs, fmt.Errorf("expected account meta at index '%d', but got nothing", i))
+			continue
 		}
 		if err := acc.AssertEquivalent(b[i]); err != nil {
-			return fmt.Errorf("account meta '%d': %w", i, err)
+			errs = append(errs, fmt.Errorf("account meta '%d': %w", i, err))
+			continue
 		}
 	}
-	return nil
+	return errors.Join(errs...)
 }
 
 func calcSplitAtLengths(total int, index int) (int, int) {
