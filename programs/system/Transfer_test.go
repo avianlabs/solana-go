@@ -20,6 +20,8 @@ import (
 	"testing"
 
 	ag_gofuzz "github.com/gagliardetto/gofuzz"
+	ag_solanago "github.com/gagliardetto/solana-go"
+	"github.com/stretchr/testify/require"
 	ag_require "github.com/stretchr/testify/require"
 )
 
@@ -43,4 +45,27 @@ func TestEncodeDecode_Transfer(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestTransfer_AssertEquivalent(t *testing.T) {
+	tx1, err := ag_solanago.NewTransaction([]ag_solanago.Instruction{
+		NewTransferInstruction(
+			1,
+			ag_solanago.PK{},
+			ag_solanago.PK{},
+		).Build(),
+	}, ag_solanago.Hash{})
+	require.NoError(t, err)
+
+	require.NoError(t, tx1.Message.AssertEquivalent(tx1.Message))
+
+	tx2, err := ag_solanago.NewTransaction([]ag_solanago.Instruction{
+		NewTransferInstruction(
+			2,
+			ag_solanago.PK{},
+			ag_solanago.PK{},
+		).Build(),
+	}, ag_solanago.Hash{}, ag_solanago.TransactionPayer(ag_solanago.PK{}))
+
+	require.Error(t, tx1.Message.AssertEquivalent(tx2.Message))
 }

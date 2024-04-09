@@ -182,6 +182,18 @@ func (inst *Instruction) Data() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+func (a *Instruction) AssertEquivalent(in ag_solanago.Instruction) error {
+	b, ok := in.(*Instruction)
+	if !ok {
+		return fmt.Errorf("expected %T, but got %T", a, in)
+	}
+	equiv, ok := a.BaseVariant.Impl.(ag_solanago.EquivalenceAssertable[interface{}])
+	if !ok {
+		return ag_solanago.CheckInstructionEquivalence(a, b)
+	}
+	return equiv.AssertEquivalent(b.BaseVariant.Impl)
+}
+
 func (inst *Instruction) TextEncode(encoder *ag_text.Encoder, option *ag_text.Option) error {
 	return encoder.Encode(inst.Impl, option)
 }

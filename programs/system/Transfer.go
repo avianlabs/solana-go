@@ -150,6 +150,20 @@ func (inst *Transfer) UnmarshalWithDecoder(decoder *ag_binary.Decoder) error {
 	return nil
 }
 
+func (a *Transfer) AssertEquivalent(in interface{}) error {
+	b, ok := in.(*Transfer)
+	if !ok {
+		return fmt.Errorf("expected %T, but got %T", a, in)
+	}
+	if *a.Lamports != *b.Lamports {
+		return fmt.Errorf("(%T) expected '%d' lamports, but got '%d'", a, *a.Lamports, *b.Lamports)
+	}
+	if err := a.AccountMetaSlice.AssertEquivalent(b.AccountMetaSlice); err != nil {
+		return fmt.Errorf("(%T) accounts: %w", a, err)
+	}
+	return nil
+}
+
 // NewTransferInstruction declares a new Transfer instruction with the provided parameters and accounts.
 func NewTransferInstruction(
 	// Parameters:

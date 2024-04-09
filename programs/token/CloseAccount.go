@@ -184,6 +184,20 @@ func (obj *CloseAccount) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err e
 	return nil
 }
 
+func (a *CloseAccount) AssertEquivalent(in interface{}) error {
+	b, ok := in.(*CloseAccount)
+	if !ok {
+		return fmt.Errorf("expected %T, but got %T", a, in)
+	}
+	if err := a.Accounts.AssertEquivalent(b.Accounts); err != nil {
+		return fmt.Errorf("(%T) accounts: %w", a, err)
+	}
+	if err := a.Signers.AssertEquivalent(b.Signers); err != nil {
+		return fmt.Errorf("(%T) signers: %w", a, err)
+	}
+	return nil
+}
+
 // NewCloseAccountInstruction declares a new CloseAccount instruction with the provided parameters and accounts.
 func NewCloseAccountInstruction(
 	// Accounts:
