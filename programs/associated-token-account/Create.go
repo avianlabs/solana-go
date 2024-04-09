@@ -198,6 +198,17 @@ func (inst *Create) UnmarshalWithDecoder(decoder *bin.Decoder) error {
 	return nil
 }
 
+func (a *Create) AssertEquivalent(in interface{}) error {
+	b, ok := in.(*Create)
+	if !ok {
+		return fmt.Errorf("expected %T, but got %T", a, in)
+	}
+	if err := a.AccountMetaSlice.AssertEquivalent(b.AccountMetaSlice); err != nil {
+		return fmt.Errorf("(%T) accounts: %w", a, err)
+	}
+	return nil
+}
+
 func NewCreateInstruction(
 	payer solana.PublicKey,
 	walletAddress solana.PublicKey,

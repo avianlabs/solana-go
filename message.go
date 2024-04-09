@@ -18,7 +18,9 @@
 package solana
 
 import (
+	"bytes"
 	"encoding/base64"
+	"errors"
 	"fmt"
 
 	bin "github.com/gagliardetto/binary"
@@ -771,6 +773,102 @@ func (m Message) IsWritable(account PublicKey) (bool, error) {
 		return index-int(h.NumRequiredSignatures) < (m.numStaticAccounts()-int(h.NumRequiredSignatures))-int(h.NumReadonlyUnsignedAccounts), nil
 	}
 	return index < int(h.NumRequiredSignatures-h.NumReadonlySignedAccounts), nil
+}
+
+// AssertEquivalent is essentially an equality check, but it operates on
+// decoded instructions (where possible) which gives useful failures that
+// identify how messages differ, and will allow for differences in transaction
+// version.
+func (a Message) AssertEquivalent(b Message) error {
+	ins, err := a.DecodeInstructions()
+	if err != nil {
+		return err
+	}
+	var errs []error
+	for i, ain := range ins {
+		if len(b.Instructions) < i+1 {
+			errs = append(errs, fmt.Errorf("not equivalent: instruction '%d': expected '%T', but got nothing", i, ain))
+			continue
+		}
+		bin, err := b.DecodeInstruction(b.Instructions[i])
+		if err != nil {
+			return err
+		}
+		equiv, ok := ain.(EquivalenceAssertable[Instruction])
+		if !ok {
+			if err := CheckInstructionEquivalence(ain, bin); err != nil {
+				errs = append(errs, fmt.Errorf("not equivalent: instruction '%d': %w", err))
+				continue
+			}
+			continue
+		}
+		if err := equiv.AssertEquivalent(bin); err != nil {
+			errs = append(errs, fmt.Errorf("not equivalent: instruction '%d': %w", i, err))
+			continue
+		}
+	}
+	// TODO: Also check other fields.
+	return errors.Join(errs...)
+}
+
+func (a Message) IsEquivalent(b Message) bool {
+	if err := a.AssertEquivalent(b); err != nil {
+		return false
+	}
+	return true
+}
+
+func (m Message) DecodeInstruction(cin CompiledInstruction) (Instruction, error) {
+	pid, err := m.Program(cin.ProgramIDIndex)
+	if err != nil {
+		return nil, err
+	}
+	accs, err := cin.ResolveInstructionAccounts(&m)
+	if err != nil {
+		return nil, err
+	}
+	in, err := DecodeInstruction(pid, accs, cin.Data)
+	if err != nil {
+		return nil, err
+	}
+	return in.(Instruction), nil
+}
+
+func (m Message) DecodeInstructions() ([]Instruction, error) {
+	ins := make([]Instruction, 0, len(m.Instructions))
+	for _, cin := range m.Instructions {
+		in, err := m.DecodeInstruction(cin)
+		if err != nil {
+			return nil, err
+		}
+		ins = append(ins, in)
+	}
+	return ins, nil
+}
+
+// CheckInstructionEquivalence is the fallback equivalence checking logic
+// which doesn't give as good errors because it compares compiled instruction
+// data.
+func CheckInstructionEquivalence(a, b Instruction) error {
+	if !a.ProgramID().Equals(b.ProgramID()) {
+		return fmt.Errorf("expected programID: %q, but got %q", a.ProgramID(), b.ProgramID())
+	}
+	if err := AccountMetaSlice(a.Accounts()).
+		AssertEquivalent(b.Accounts()); err != nil {
+		return fmt.Errorf("accounts: %w", err)
+	}
+	adata, err := a.Data()
+	if err != nil {
+		return err
+	}
+	bdata, err := b.Data()
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(adata, bdata) {
+		return errors.New("data isn't equal")
+	}
+	return nil
 }
 
 func (m Message) signerKeys() []PublicKey {

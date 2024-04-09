@@ -18,6 +18,7 @@
 package solana
 
 import (
+	"errors"
 	"fmt"
 )
 
@@ -75,6 +76,19 @@ func (meta *AccountMeta) WRITE() *AccountMeta {
 func (meta *AccountMeta) SIGNER() *AccountMeta {
 	meta.IsSigner = true
 	return meta
+}
+
+func (a *AccountMeta) AssertEquivalent(b *AccountMeta) error {
+	if a == nil && b != nil {
+		return fmt.Errorf("expected 'nil', but got '%v'", b)
+	}
+	if a == nil && b == nil {
+		return nil
+	}
+	if *a != *b {
+		return fmt.Errorf("expected %+v, but got %+v", *a, *b)
+	}
+	return nil
 }
 
 func NewAccountMeta(
@@ -173,6 +187,21 @@ func (slice AccountMetaSlice) SplitFrom(index int) (AccountMetaSlice, AccountMet
 	copy(second, slice[index:])
 
 	return first, second
+}
+
+func (a AccountMetaSlice) AssertEquivalent(b AccountMetaSlice) error {
+	var errs []error
+	for i, acc := range a {
+		if b.Len() < i+1 {
+			errs = append(errs, fmt.Errorf("expected account meta at index '%d', but got nothing", i))
+			continue
+		}
+		if err := acc.AssertEquivalent(b[i]); err != nil {
+			errs = append(errs, fmt.Errorf("account meta '%d': %w", i, err))
+			continue
+		}
+	}
+	return errors.Join(errs...)
 }
 
 func calcSplitAtLengths(total int, index int) (int, int) {

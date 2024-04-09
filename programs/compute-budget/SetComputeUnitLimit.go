@@ -16,6 +16,7 @@ package computebudget
 
 import (
 	"errors"
+	"fmt"
 
 	ag_binary "github.com/gagliardetto/binary"
 	ag_solanago "github.com/gagliardetto/solana-go"
@@ -108,6 +109,17 @@ func (obj *SetComputeUnitLimit) UnmarshalWithDecoder(decoder *ag_binary.Decoder)
 	err = decoder.Decode(&obj.Units)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func (a *SetComputeUnitLimit) AssertEquivalent(in interface{}) error {
+	b, ok := in.(*SetComputeUnitLimit)
+	if !ok {
+		return fmt.Errorf("expected %T, but got %T", a, in)
+	}
+	if a.Units != b.Units {
+		return fmt.Errorf("(%T) expected '%d' units, but got '%d'", a, a.Units, b.Units)
 	}
 	return nil
 }

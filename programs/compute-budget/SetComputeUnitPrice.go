@@ -16,6 +16,7 @@ package computebudget
 
 import (
 	"errors"
+	"fmt"
 
 	ag_binary "github.com/gagliardetto/binary"
 	ag_solanago "github.com/gagliardetto/solana-go"
@@ -102,6 +103,17 @@ func (obj *SetComputeUnitPrice) UnmarshalWithDecoder(decoder *ag_binary.Decoder)
 	err = decoder.Decode(&obj.MicroLamports)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func (a *SetComputeUnitPrice) AssertEquivalent(in interface{}) error {
+	b, ok := in.(*SetComputeUnitPrice)
+	if !ok {
+		return fmt.Errorf("expected %T, but got %T", a, in)
+	}
+	if a.MicroLamports != b.MicroLamports {
+		return fmt.Errorf("(%T) expected '%d' microLamports, but got '%d'", a, a.MicroLamports, b.MicroLamports)
 	}
 	return nil
 }

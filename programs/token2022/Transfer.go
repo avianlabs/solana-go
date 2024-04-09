@@ -214,6 +214,23 @@ func (obj *Transfer) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error
 	return nil
 }
 
+func (a *Transfer) AssertEquivalent(in interface{}) error {
+	b, ok := in.(*Transfer)
+	if !ok {
+		return fmt.Errorf("expected %T, but got %T", a, in)
+	}
+	if *a.Amount != *b.Amount {
+		return fmt.Errorf("(%T) expected '%d' amount, but got '%d'", a, *a.Amount, *b.Amount)
+	}
+	if err := a.Accounts.AssertEquivalent(b.Accounts); err != nil {
+		return fmt.Errorf("(%T) accounts: %w", a, err)
+	}
+	if err := a.Signers.AssertEquivalent(b.Signers); err != nil {
+		return fmt.Errorf("(%T) signers: %w", a, err)
+	}
+	return nil
+}
+
 // NewTransferInstruction declares a new Transfer instruction with the provided parameters and accounts.
 func NewTransferInstruction(
 	// Parameters:

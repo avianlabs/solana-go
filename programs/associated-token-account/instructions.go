@@ -70,6 +70,18 @@ func (inst *Instruction) Data() ([]byte, error) {
 	return []byte{}, nil
 }
 
+func (a *Instruction) AssertEquivalent(in solana.Instruction) error {
+	b, ok := in.(*Instruction)
+	if !ok {
+		return fmt.Errorf("expected %T, but got %T", a, in)
+	}
+	equiv, ok := a.BaseVariant.Impl.(solana.EquivalenceAssertable[interface{}])
+	if !ok {
+		return solana.CheckInstructionEquivalence(a, b)
+	}
+	return equiv.AssertEquivalent(b.BaseVariant.Impl)
+}
+
 func (inst *Instruction) TextEncode(encoder *text.Encoder, option *text.Option) error {
 	return encoder.Encode(inst.Impl, option)
 }
