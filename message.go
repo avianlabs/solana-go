@@ -784,9 +784,11 @@ func (a Message) AssertEquivalent(b Message) error {
 	if err != nil {
 		return err
 	}
+	var errs []error
 	for i, ain := range ins {
 		if len(b.Instructions) < i+1 {
-			return fmt.Errorf("not equivalent: instruction %d: expected '%T', but got nothing", i, ain)
+			errs = append(errs, fmt.Errorf("not equivalent: instruction '%d': expected '%T', but got nothing", i, ain))
+			continue
 		}
 		bin, err := b.DecodeInstruction(b.Instructions[i])
 		if err != nil {
@@ -795,16 +797,18 @@ func (a Message) AssertEquivalent(b Message) error {
 		equiv, ok := ain.(EquivalenceAssertable[Instruction])
 		if !ok {
 			if err := CheckInstructionEquivalence(ain, bin); err != nil {
-				return err
+				errs = append(errs, fmt.Errorf("not equivalent: instruction '%d': %w", err))
+				continue
 			}
 			continue
 		}
 		if err := equiv.AssertEquivalent(bin); err != nil {
-			return fmt.Errorf("not equivalent: instruction '%d': %w", i, err)
+			errs = append(errs, fmt.Errorf("not equivalent: instruction '%d': %w", i, err))
+			continue
 		}
 	}
 	// TODO: Also check other fields.
-	return nil
+	return errors.Join(errs...)
 }
 
 func (a Message) IsEquivalent(b Message) bool {
