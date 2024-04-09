@@ -853,14 +853,46 @@ func (m Message) IsWritable(account PublicKey) (bool, error) {
 // identify how messages differ, and will allow for differences in transaction
 // version.
 func (a Message) AssertEquivalent(b Message) error {
+	if err := a.assertEquivalent(b); err != nil {
+		return fmt.Errorf("not equivalent: %w", err)
+	}
+	return nil
+}
+
+func (a Message) IsEquivalent(b Message) bool {
+	if err := a.assertEquivalent(b); err != nil {
+		return false
+	}
+	return true
+}
+
+func (a Message) assertEquivalent(b Message) error {
+	var errs []error
+	// Assert all accounts in a are in b (but agnostic on ordering).
+	for _, accKey := range a.AccountKeys {
+		if !containsAccount(b.AccountKeys, accKey) {
+			errs = append(errs, fmt.Errorf("account keys: %q not found", accKey))
+		}
+	}
+	// Assert all accounts in b are in a (but agnostic on ordering).
+	for _, accKey := range b.AccountKeys {
+		if !containsAccount(a.AccountKeys, accKey) {
+			errs = append(errs, fmt.Errorf("account keys: unexpected account %q found", accKey))
+		}
+	}
+	if err := a.Header.AssertEquivalent(b.Header); err != nil {
+		errs = append(errs, fmt.Errorf("header: %w", err))
+	}
+	if !a.RecentBlockhash.Equals(b.RecentBlockhash) {
+		errs = append(errs, fmt.Errorf("recent blockhash: expected %q, but got %q", a.RecentBlockhash, b.RecentBlockhash))
+	}
 	ins, err := a.DecodeInstructions()
 	if err != nil {
 		return err
 	}
-	var errs []error
 	for i, ain := range ins {
 		if len(b.Instructions) < i+1 {
-			errs = append(errs, fmt.Errorf("not equivalent: instruction '%d': expected '%T', but got nothing", i, ain))
+			errs = append(errs, fmt.Errorf("instruction '%d': expected '%T', but got nothing", i, ain))
 			continue
 		}
 		bin, err := b.DecodeInstruction(b.Instructions[i])
@@ -870,25 +902,17 @@ func (a Message) AssertEquivalent(b Message) error {
 		equiv, ok := ain.(EquivalenceAssertable[Instruction])
 		if !ok {
 			if err := CheckInstructionEquivalence(ain, bin); err != nil {
-				errs = append(errs, fmt.Errorf("not equivalent: instruction '%d': %w", err))
+				errs = append(errs, fmt.Errorf("instruction '%d': %w", i, err))
 				continue
 			}
 			continue
 		}
 		if err := equiv.AssertEquivalent(bin); err != nil {
-			errs = append(errs, fmt.Errorf("not equivalent: instruction '%d': %w", i, err))
+			errs = append(errs, fmt.Errorf("instruction '%d': %w", i, err))
 			continue
 		}
 	}
-	// TODO: Also check other fields.
 	return errors.Join(errs...)
-}
-
-func (a Message) IsEquivalent(b Message) bool {
-	if err := a.AssertEquivalent(b); err != nil {
-		return false
-	}
-	return true
 }
 
 func (m Message) DecodeInstruction(cin CompiledInstruction) (Instruction, error) {
@@ -962,4 +986,36 @@ type MessageHeader struct {
 
 	// The last `numReadonlyUnsignedAccounts` of the unsigned keys are read-only accounts.
 	NumReadonlyUnsignedAccounts uint8 `json:"numReadonlyUnsignedAccounts"`
+}
+
+func (a MessageHeader) AssertEquivalent(b MessageHeader) error {
+	var errs []error
+	if a.NumRequiredSignatures != b.NumRequiredSignatures {
+		errs = append(errs, fmt.Errorf(
+			"expected '%d' numRequiredSignatures, but got '%d'",
+			a.NumRequiredSignatures, b.NumRequiredSignatures,
+		))
+	}
+	if a.NumReadonlySignedAccounts != b.NumReadonlySignedAccounts {
+		errs = append(errs, fmt.Errorf(
+			"expected '%d' numReadonlySignedAccounts, but got '%d'",
+			a.NumReadonlySignedAccounts, b.NumReadonlySignedAccounts,
+		))
+	}
+	if a.NumReadonlyUnsignedAccounts != b.NumReadonlyUnsignedAccounts {
+		errs = append(errs, fmt.Errorf(
+			"expected '%d' numReadonlyUnsignedAccounts, but got '%d'",
+			a.NumReadonlyUnsignedAccounts, b.NumReadonlyUnsignedAccounts,
+		))
+	}
+	return errors.Join(errs...)
+}
+
+func containsAccount(accountKeys []PublicKey, accountKey PublicKey) bool {
+	for _, v := range accountKeys {
+		if v.Equals(accountKey) {
+			return true
+		}
+	}
+	return false
 }
