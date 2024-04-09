@@ -21,3 +21,7 @@ type AccountsSettable interface {
 type AccountsGettable interface {
 	GetAccounts() (accounts []*AccountMeta)
 }
+
+type EquivalenceAssertable[T any] interface {
+	AssertEquivalent(T) error
+}

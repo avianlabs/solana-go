@@ -45,6 +45,10 @@ func (t *testTransactionInstructions) Data() ([]byte, error) {
 	return t.data, nil
 }
 
+func (*testTransactionInstructions) AssertEquivalent(Instruction) error {
+	panic("unimplemented")
+}
+
 func TestNewTransaction(t *testing.T) {
 	debugNewTransaction = true
 
