@@ -191,6 +191,24 @@ func TestSignTransaction(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, len(signatures), 2)
 	})
+
+	t.Run("should replace placeholder signatures", func(t *testing.T) {
+		// Replace signatures with 'null' placeholders.
+		trx.Signatures[0] = Signature{}
+		trx.Signatures[1] = Signature{}
+		signatures, err := trx.PartialSign(func(key PublicKey) *PrivateKey {
+			if key.Equals(signers[1].PublicKey()) {
+				return &signers[1]
+			}
+			return nil
+		})
+		require.NoError(t, err)
+		assert.Equal(t, len(trx.Signatures), 2)
+		// Assert first placeholder ignored.
+		assert.True(t, trx.Signatures[0].IsZero())
+		// Assert second placeholder replaced with signature.
+		assert.Equal(t, trx.Signatures[1], signatures[1])
+	})
 }
 
 func TestTransactionDecode(t *testing.T) {
