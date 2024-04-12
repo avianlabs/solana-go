@@ -512,14 +512,22 @@ func (tx *Transaction) PartialSign(getter privateKeyGetter) (out []Signature, er
 	signerKeys := tx.Message.signerKeys()
 
 	signedSignatures := []Signature{}
-	for _, key := range signerKeys {
+	for i, key := range signerKeys {
 		privateKey := getter(key)
 		if privateKey != nil {
 			s, err := privateKey.Sign(messageContent)
 			if err != nil {
 				return nil, fmt.Errorf("failed to signed with key %q: %w", key.String(), err)
 			}
-			signedSignatures = append(signedSignatures, s)
+			if len(tx.Signatures) == int(tx.Message.Header.NumRequiredSignatures) &&
+				tx.Signatures[i].IsZero() {
+				// Some libraries will insert 'null' signatures as placeholders
+				// when partially signing a transaction. In this case, we'll
+				// replace the placeholder signature rather than appending.
+				tx.Signatures[i] = s
+			} else {
+				signedSignatures = append(signedSignatures, s)
+			}
 		}
 	}
 	tx.Signatures = append(tx.Signatures, signedSignatures...)
