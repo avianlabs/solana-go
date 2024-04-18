@@ -240,6 +240,8 @@ type HTTPError struct {
 	err  error
 }
 
+var _ error = (*HTTPError)(nil)
+
 // HTTPClient is an abstraction for a HTTP client
 type HTTPClient interface {
 	Do(*http.Request) (*http.Response, error)
@@ -256,6 +258,11 @@ func NewHTTPError(code int, err error) *HTTPError {
 // Error function is provided to be used as error object.
 func (e *HTTPError) Error() string {
 	return e.err.Error()
+}
+
+// Unwrap returns the underlying error.
+func (res HTTPError) Unwrap() error {
+	return res.err
 }
 
 type rpcClient struct {
