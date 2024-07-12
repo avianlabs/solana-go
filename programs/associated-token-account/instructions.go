@@ -15,9 +15,11 @@
 package associatedtokenaccount
 
 import (
+	"bytes"
 	"fmt"
 
 	spew "github.com/davecgh/go-spew/spew"
+	ag_binary "github.com/gagliardetto/binary"
 	bin "github.com/gagliardetto/binary"
 	solana "github.com/gagliardetto/solana-go"
 	text "github.com/gagliardetto/solana-go/text"
@@ -67,7 +69,11 @@ func (inst *Instruction) Accounts() (out []*solana.AccountMeta) {
 }
 
 func (inst *Instruction) Data() ([]byte, error) {
-	return []byte{}, nil
+	buf := new(bytes.Buffer)
+	if err := ag_binary.NewBinEncoder(buf).Encode(inst); err != nil {
+		return nil, fmt.Errorf("unable to encode instruction: %w", err)
+	}
+	return buf.Bytes(), nil
 }
 
 func (a *Instruction) AssertEquivalent(in solana.Instruction) error {
