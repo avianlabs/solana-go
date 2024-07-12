@@ -18,6 +18,8 @@ import (
 	"errors"
 	"fmt"
 
+	ag_format "github.com/gagliardetto/solana-go/text/format"
+
 	bin "github.com/gagliardetto/binary"
 	solana "github.com/gagliardetto/solana-go"
 	format "github.com/gagliardetto/solana-go/text/format"
@@ -51,6 +53,7 @@ type Create struct {
 	// [6] = [] SysVarRent
 	// ··········· SysVarRentPubkey
 	solana.AccountMetaSlice `bin:"-" borsh_skip:"true"`
+	Idempotent              bool `bin:"-" borsh_skip:"true"`
 }
 
 // NewCreateInstructionBuilder creates a new `Create` instruction builder.
@@ -76,6 +79,11 @@ func (inst *Create) SetMint(mint solana.PublicKey) *Create {
 
 func (inst *Create) SetTokenProgramID(tokenProgramID solana.PublicKey) *Create {
 	inst.TokenProgramID = tokenProgramID
+	return inst
+}
+
+func (inst *Create) SetIdempotent(idempotent bool) *Create {
+	inst.Idempotent = idempotent
 	return inst
 }
 
@@ -174,10 +182,12 @@ func (inst *Create) EncodeToTree(parent treeout.Branches) {
 				ParentFunc(func(instructionBranch treeout.Branches) {
 
 					// Parameters of the instruction:
-					instructionBranch.Child("Params[len=0]").ParentFunc(func(paramsBranch treeout.Branches) {})
+					instructionBranch.Child("Params").ParentFunc(func(paramsBranch treeout.Branches) {
+						paramsBranch.Child(ag_format.Param("Idempotent", inst.Idempotent))
+					})
 
 					// Accounts of the instruction:
-					instructionBranch.Child("Accounts[len=7").ParentFunc(func(accountsBranch treeout.Branches) {
+					instructionBranch.Child("Accounts[len=7]").ParentFunc(func(accountsBranch treeout.Branches) {
 						accountsBranch.Child(format.Meta("                 payer", inst.AccountMetaSlice.Get(0)))
 						accountsBranch.Child(format.Meta("associatedTokenAddress", inst.AccountMetaSlice.Get(1)))
 						accountsBranch.Child(format.Meta("                wallet", inst.AccountMetaSlice.Get(2)))
@@ -191,10 +201,20 @@ func (inst *Create) EncodeToTree(parent treeout.Branches) {
 }
 
 func (inst Create) MarshalWithEncoder(encoder *bin.Encoder) error {
-	return encoder.WriteBytes([]byte{}, false)
+	if inst.Idempotent {
+		if err := encoder.Encode(inst.Idempotent); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (inst *Create) UnmarshalWithDecoder(decoder *bin.Decoder) error {
+	if decoder.HasRemaining() {
+		if err := decoder.Decode(&inst.Idempotent); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -214,10 +234,12 @@ func NewCreateInstruction(
 	walletAddress solana.PublicKey,
 	splTokenMintAddress solana.PublicKey,
 	tokenProgramID solana.PublicKey,
+	idempotent bool,
 ) *Create {
 	return NewCreateInstructionBuilder().
 		SetPayer(payer).
 		SetWallet(walletAddress).
 		SetMint(splTokenMintAddress).
-		SetTokenProgramID(tokenProgramID)
+		SetTokenProgramID(tokenProgramID).
+		SetIdempotent(idempotent)
 }
