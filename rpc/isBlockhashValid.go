@@ -27,10 +27,14 @@ func (cl *Client) IsBlockhashValid(
 	// Commitment requirement. Optional.
 	commitment CommitmentType,
 ) (out *IsValidBlockhashResult, err error) {
-	return cl.IsBlockhashValidWithOpts(
-		ctx, blockHash, IsBlockhashValidOpts{
+	var opts *IsBlockhashValidOpts
+	if commitment != "" {
+		opts = &IsBlockhashValidOpts{
 			Commitment: commitment,
-		},
+		}
+	}
+	return cl.IsBlockhashValidWithOpts(
+		ctx, blockHash, opts,
 	)
 }
 
@@ -42,14 +46,21 @@ func (cl *Client) IsBlockhashValidWithOpts(
 	ctx context.Context,
 	// Blockhash to be queried. Required.
 	blockHash solana.Hash,
-	opts IsBlockhashValidOpts,
+	opts *IsBlockhashValidOpts,
 ) (out *IsValidBlockhashResult, err error) {
-	params := []interface{}{blockHash}
-	if opts.Commitment != "" {
-		params = append(params, M{"commitment": string(opts.Commitment)})
+	obj := M{}
+	if opts != nil {
+		if opts.Commitment != "" {
+			obj["commitment"] = string(opts.Commitment)
+		}
+		if opts.MinContextSlot != nil {
+			obj["minContextSlot"] = *opts.MinContextSlot
+		}
 	}
-	if opts.MinContextSlot != nil {
-		params = append(params, M{"minContextSlot": *opts.MinContextSlot})
+
+	params := []interface{}{blockHash}
+	if len(obj) > 0 {
+		params = append(params, obj)
 	}
 
 	err = cl.rpcClient.CallForInto(ctx, &out, "isBlockhashValid", params)
