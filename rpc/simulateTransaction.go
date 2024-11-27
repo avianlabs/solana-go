@@ -72,6 +72,9 @@ type SimulateTransactionOpts struct {
 	ReplaceRecentBlockhash bool
 
 	Accounts *SimulateTransactionAccountsOpts
+
+	// The minimum slot the request can be evaluated at.
+	MinContextSlot *uint64
 }
 
 type SimulateTransactionAccountsOpts struct {
@@ -124,6 +127,9 @@ func (cl *Client) SimulateRawTransactionWithOpts(
 				"encoding":  opts.Accounts.Encoding,
 				"addresses": opts.Accounts.Addresses,
 			}
+		}
+		if opts.MinContextSlot != nil {
+			obj["minContextSlot"] = *opts.MinContextSlot
 		}
 	}
 
