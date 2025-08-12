@@ -29,7 +29,7 @@ func main() {
 
 	txSig := solana.MustSignatureFromBase58("4bjVLV1g9SAfv7BSAdNnuSPRbSscADHFe4HegL6YVcuEBMY83edLEvtfjE4jfr6rwdLwKBQbaFiGgoLGtVicDzHq")
 	{
-		out, err := client.GetTransaction(
+		out, _, err := client.GetTransaction(
 			context.TODO(),
 			txSig,
 			nil,
@@ -41,7 +41,7 @@ func main() {
 		spew.Dump(out.Transaction.GetTransaction())
 	}
 	{
-		out, err := client.GetTransaction(
+		out, _, err := client.GetTransaction(
 			context.TODO(),
 			txSig,
 			&rpc.GetTransactionOpts{
@@ -55,7 +55,7 @@ func main() {
 		spew.Dump(out.Transaction.GetTransaction())
 	}
 	{
-		out, err := client.GetTransaction(
+		out, _, err := client.GetTransaction(
 			context.TODO(),
 			txSig,
 			&rpc.GetTransactionOpts{
@@ -69,7 +69,7 @@ func main() {
 		spew.Dump(out.Transaction.GetBinary())
 	}
 	{
-		out, err := client.GetTransaction(
+		out, _, err := client.GetTransaction(
 			context.TODO(),
 			txSig,
 			&rpc.GetTransactionOpts{

@@ -2302,7 +2302,7 @@ func TestClient_GetTransaction(t *testing.T) {
 		Commitment:                     CommitmentMax,
 		MaxSupportedTransactionVersion: &maxSupportedTransactionVersion,
 	}
-	out, err := client.GetTransaction(
+	out, _, err := client.GetTransaction(
 		context.Background(),
 		solana.MustSignatureFromBase58(tx),
 		&opts,

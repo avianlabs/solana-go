@@ -41,7 +41,7 @@ func (cl *Client) GetTransaction(
 	ctx context.Context,
 	txSig solana.Signature, // transaction signature
 	opts *GetTransactionOpts,
-) (out *GetTransactionResult, err error) {
+) (out *GetTransactionResult, bytes []byte, err error) {
 	params := []interface{}{txSig}
 	if opts != nil {
 		obj := M{}
@@ -55,7 +55,7 @@ func (cl *Client) GetTransaction(
 				solana.EncodingBase64,
 				solana.EncodingBase64Zstd,
 			) {
-				return nil, fmt.Errorf("provided encoding is not supported: %s", opts.Encoding)
+				return nil, nil, fmt.Errorf("provided encoding is not supported: %s", opts.Encoding)
 			}
 			obj["encoding"] = opts.Encoding
 		}
@@ -71,12 +71,12 @@ func (cl *Client) GetTransaction(
 	}
 	err = cl.rpcClient.CallForInto(ctx, &out, "getTransaction", params)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if out == nil {
-		return nil, ErrNotFound
+		return nil, nil, ErrNotFound
 	}
-
+	bytes, _ = json.Marshal(out)
 	if out.Meta.Err == nil {
 		return
 	}
