@@ -26,6 +26,7 @@ type TransactionDetailsType string
 const (
 	TransactionDetailsFull       TransactionDetailsType = "full"
 	TransactionDetailsSignatures TransactionDetailsType = "signatures"
+	TransactionDetailsAccounts   TransactionDetailsType = "accounts"
 	TransactionDetailsNone       TransactionDetailsType = "none"
 )
 
@@ -89,9 +90,12 @@ func (cl *Client) GetBlockWithOpts(
 		"encoding": solana.EncodingBase64,
 	}
 
+	// By default, they can be parsed as the default `TransactionDetails` is full
+	canParseError := true
 	if opts != nil {
 		if opts.TransactionDetails != "" {
 			obj["transactionDetails"] = opts.TransactionDetails
+			canParseError = opts.TransactionDetails == TransactionDetailsFull // The only mode where it can be parsed
 		}
 		if opts.Rewards != nil {
 			obj["rewards"] = opts.Rewards
@@ -129,7 +133,7 @@ func (cl *Client) GetBlockWithOpts(
 		// Block is not confirmed.
 		return nil, ErrNotConfirmed
 	}
-	if !cl.parseTransactionErrors {
+	if !cl.parseTransactionErrors || !canParseError {
 		return
 	}
 	for i, val := range out.Transactions {
