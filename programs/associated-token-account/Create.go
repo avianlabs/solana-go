@@ -218,13 +218,64 @@ func (inst *Create) UnmarshalWithDecoder(decoder *bin.Decoder) error {
 	return nil
 }
 
+// requiredCreateAccounts is the number of accounts a Create instruction must
+// reference: payer, associated token account, wallet, mint, system program,
+// and token program. The rent sysvar used to follow as a seventh account but
+// is no longer required by the associated token account program, so newer
+// client libraries omit it and equivalence treats it as optional.
+const requiredCreateAccounts = 6
+
 func (a *Create) AssertEquivalent(in interface{}) error {
 	b, ok := in.(*Create)
 	if !ok {
 		return fmt.Errorf("expected %T, but got %T", a, in)
 	}
-	if err := a.AccountMetaSlice.AssertEquivalent(b.AccountMetaSlice); err != nil {
+	if err := assertCreateAccountsEquivalent(a.AccountMetaSlice, b.AccountMetaSlice); err != nil {
 		return fmt.Errorf("(%T) accounts: %w", a, err)
+	}
+	return nil
+}
+
+// assertCreateAccountsEquivalent compares the account lists of two Create
+// instructions. The six required accounts are compared strictly; the trailing
+// rent sysvar account may be present or absent on either side independently,
+// but when present it must be exactly the read-only, non-signer rent sysvar.
+func assertCreateAccountsEquivalent(a, b solana.AccountMetaSlice) error {
+	var errs []error
+	limit := len(a)
+	if limit > requiredCreateAccounts {
+		limit = requiredCreateAccounts
+	}
+	for i, acc := range a[:limit] {
+		if b.Len() < i+1 {
+			errs = append(errs, fmt.Errorf("expected account meta at index '%d', but got nothing", i))
+			continue
+		}
+		if err := acc.AssertEquivalent(b[i]); err != nil {
+			errs = append(errs, fmt.Errorf("account meta '%d': %w", i, err))
+		}
+	}
+	if err := assertOptionalRentMeta(a); err != nil {
+		errs = append(errs, err)
+	}
+	if err := assertOptionalRentMeta(b); err != nil {
+		errs = append(errs, err)
+	}
+	return errors.Join(errs...)
+}
+
+// assertOptionalRentMeta checks that any account beyond the six required ones
+// is a single read-only, non-signer rent sysvar meta.
+func assertOptionalRentMeta(metas solana.AccountMetaSlice) error {
+	if len(metas) <= requiredCreateAccounts {
+		return nil
+	}
+	if len(metas) > requiredCreateAccounts+1 {
+		return fmt.Errorf("expected at most %d account metas, but got %d", requiredCreateAccounts+1, len(metas))
+	}
+	want := &solana.AccountMeta{PublicKey: solana.SysVarRentPubkey}
+	if err := want.AssertEquivalent(metas[requiredCreateAccounts]); err != nil {
+		return fmt.Errorf("account meta '%d' (rent sysvar): %w", requiredCreateAccounts, err)
 	}
 	return nil
 }

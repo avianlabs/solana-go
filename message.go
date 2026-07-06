@@ -868,19 +868,44 @@ func (a Message) IsEquivalent(b Message) bool {
 
 func (a Message) assertEquivalent(b Message) error {
 	var errs []error
+	// The rent sysvar is no longer required by the associated token account
+	// program's Create instruction, so newer client libraries omit it while
+	// older ones still include it. When exactly one message references the
+	// rent sysvar as a read-only unsigned account, tolerate the difference:
+	// skip it in the account-key comparison and exclude it from the
+	// read-only unsigned header count. The account is a fixed-address,
+	// read-only sysvar, so its presence or absence cannot change what the
+	// transaction is able to do.
+	tolerateRent := a.hasStaticReadonlyUnsignedRent() != b.hasStaticReadonlyUnsignedRent()
 	// Assert all accounts in a are in b (but agnostic on ordering).
 	for _, accKey := range a.AccountKeys {
+		if tolerateRent && accKey.Equals(SysVarRentPubkey) {
+			continue
+		}
 		if !containsAccount(b.AccountKeys, accKey) {
 			errs = append(errs, fmt.Errorf("account keys: %q not found", accKey))
 		}
 	}
 	// Assert all accounts in b are in a (but agnostic on ordering).
 	for _, accKey := range b.AccountKeys {
+		if tolerateRent && accKey.Equals(SysVarRentPubkey) {
+			continue
+		}
 		if !containsAccount(a.AccountKeys, accKey) {
 			errs = append(errs, fmt.Errorf("account keys: unexpected account %q found", accKey))
 		}
 	}
-	if err := a.Header.AssertEquivalent(b.Header); err != nil {
+	aHeader, bHeader := a.Header, b.Header
+	if tolerateRent {
+		// Exactly one side counts the rent sysvar among its read-only
+		// unsigned accounts; exclude it so the remaining counts compare.
+		if a.hasStaticReadonlyUnsignedRent() {
+			aHeader.NumReadonlyUnsignedAccounts--
+		} else {
+			bHeader.NumReadonlyUnsignedAccounts--
+		}
+	}
+	if err := aHeader.AssertEquivalent(bHeader); err != nil {
 		errs = append(errs, fmt.Errorf("header: %w", err))
 	}
 	if !a.RecentBlockhash.Equals(b.RecentBlockhash) {
@@ -1009,6 +1034,26 @@ func (a MessageHeader) AssertEquivalent(b MessageHeader) error {
 		))
 	}
 	return errors.Join(errs...)
+}
+
+// hasStaticReadonlyUnsignedRent reports whether the rent sysvar appears among
+// the message's static account keys within the read-only unsigned region
+// described by the header. This is the only placement a benign transaction
+// gives the rent sysvar (it can never sign and must never be writable), and
+// it is the placement assertEquivalent tolerates being present on one side
+// only.
+func (m Message) hasStaticReadonlyUnsignedRent() bool {
+	numStatic := m.numStaticAccounts()
+	firstReadonlyUnsigned := numStatic - int(m.Header.NumReadonlyUnsignedAccounts)
+	if firstReadonlyUnsigned < 0 {
+		firstReadonlyUnsigned = 0
+	}
+	for idx := firstReadonlyUnsigned; idx < numStatic && idx < len(m.AccountKeys); idx++ {
+		if m.AccountKeys[idx].Equals(SysVarRentPubkey) {
+			return true
+		}
+	}
+	return false
 }
 
 func containsAccount(accountKeys []PublicKey, accountKey PublicKey) bool {
